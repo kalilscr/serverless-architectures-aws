@@ -1,0 +1,116 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: 'grid-maker
+
+  Sample SAM Template for grid-maker
+
+  '
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 256
+Resources:
+  SourceBucket:
+    Type: AWS::S3::Bucket
+  DestinationBucket:
+    Type: AWS::S3::Bucket
+  ApiGatewayApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: Prod
+      CorsConfiguration:
+        AllowOrigins:
+        - '*'
+        AllowHeaders:
+        - '*'
+        AllowMethods:
+        - POST
+        AllowCredentials: false
+      Auth:
+        Authorizers:
+          GeneralAuth:
+            IdentitySource: $request.header.Authorization
+            JwtConfiguration:
+              issuer:
+                Fn::Sub: https://cognito-idp.${AWS::Region}.amazonaws.com/us-east-1_MNa6ga0jx
+              audience:
+              - 5a5jp6t3vsujrcm7o7397gl7co
+  AddImageFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: AddImageFunction
+      Handler: app.lambda_handler
+      Runtime: python3.9
+      Role:
+        Fn::Sub: arn:aws:iam::${AWS::AccountId}:role/sam-lab-AddImageFunctionRole
+      Environment:
+        Variables:
+          TABLE_NAME:
+            Ref: GridObjects
+          SOURCE_BUCKET:
+            Ref: SourceBucket
+      Architectures:
+      - x86_64
+      Events:
+        AddImage:
+          Type: HttpApi
+          Properties:
+            Path: /add_image
+            Method: post
+            ApiId:
+              Ref: ApiGatewayApi
+            Auth:
+              Authorizer: GeneralAuth
+    Metadata:
+      SamResourceId: AddImageFunction
+  GenerateGridFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: GenerateGridFunction
+      Handler: app.lambda_handler
+      Runtime: python3.9
+      Role:
+        Fn::Sub: arn:aws:iam::${AWS::AccountId}:role/sam-lab-GenerateGridFunctionRole
+      Environment:
+        Variables:
+          TABLE_NAME:
+            Ref: GridObjects
+          SOURCE_BUCKET:
+            Ref: SourceBucket
+          DESTINATION_BUCKET:
+            Ref: DestinationBucket
+      Architectures:
+      - x86_64
+      Events:
+        AddImage:
+          Type: HttpApi
+          Properties:
+            Path: /generate_grid
+            Method: post
+            ApiId:
+              Ref: ApiGatewayApi
+            Auth:
+              Authorizer: GeneralAuth
+    Metadata:
+      SamResourceId: GenerateGridFunction
+  GridObjects:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+      - AttributeName: uniqueGridId
+        AttributeType: S
+      - AttributeName: s3Key
+        AttributeType: S
+      KeySchema:
+      - AttributeName: uniqueGridId
+        KeyType: HASH
+      - AttributeName: s3Key
+        KeyType: RANGE
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+Outputs:
+  Api:
+    Description: API Gateway endpoint URL
+    Value:
+      Fn::Sub: https://${ApiGatewayApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/

@@ -30,14 +30,14 @@ Resources:
         AllowMethods:
           - POST
         AllowCredentials: false
-      # Auth:
-      #   Authorizers:
-      #     GeneralAuth:
-      #       IdentitySource: "$request.header.Authorization"
-      #       JwtConfiguration:
-      #         issuer: !Sub "https://cognito-idp.${AWS::Region}.amazonaws.com/REPLACE_WITH_USERPOOL_ID"
-      #         audience:
-      #           - REPLACE_WITH_APP_CLIENT_ID
+      Auth:
+        Authorizers:
+          GeneralAuth:
+            IdentitySource: "$request.header.Authorization"
+            JwtConfiguration:
+              issuer: !Sub "https://cognito-idp.${AWS::Region}.amazonaws.com/REPLACE_WITH_USERPOOL_ID"
+              audience:
+                - REPLACE_WITH_APP_CLIENT_ID
 
   AddImageFunction:
     Type: AWS::Serverless::Function
@@ -59,8 +59,8 @@ Resources:
             Path: /add_image
             Method: post
             ApiId: !Ref ApiGatewayApi
-            # Auth:
-            #   Authorizer: GeneralAuth
+            Auth:
+              Authorizer: GeneralAuth
 
   GenerateGridFunction:
     Type: AWS::Serverless::Function
@@ -83,8 +83,8 @@ Resources:
             Path: /generate_grid
             Method: post
             ApiId: !Ref ApiGatewayApi
-            # Auth:
-            #   Authorizer: GeneralAuth
+            Auth:
+              Authorizer: GeneralAuth
 
   GridObjects:
     Type: AWS::DynamoDB::Table
